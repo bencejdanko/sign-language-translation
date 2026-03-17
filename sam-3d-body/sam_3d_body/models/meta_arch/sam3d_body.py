@@ -1026,6 +1026,13 @@ class SAM3DBody(BaseModel):
 
     def get_ray_condition(self, batch):
         B, N, _, H, W = batch["img"].shape
+        # Be permissive with camera-intrinsics shape for custom inference paths.
+        if batch["cam_int"].dim() == 2:
+            batch["cam_int"] = batch["cam_int"].unsqueeze(0)
+        if batch["cam_int"].dim() != 3:
+            raise ValueError(
+                f"batch['cam_int'] must be [B, 3, 3], got {tuple(batch['cam_int'].shape)}"
+            )
         meshgrid_xy = (
             torch.stack(
                 torch.meshgrid(torch.arange(H), torch.arange(W), indexing="xy"), dim=2

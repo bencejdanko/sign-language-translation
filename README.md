@@ -33,3 +33,11 @@ for frame_idx, person_stats in enumerate(batch_results):
     pose_3d = person_stats[0]["pred_keypoints_3d"]
     print(f"Frame {frame_idx} 3D Keypoints: {pose_3d.shape}")
 ```
+
+### Troubleshooting: `cam_int` Shape Errors
+
+If you see:
+
+`IndexError: too many indices for tensor of dimension 2`
+
+during batch inference, it means camera intrinsics were provided as a 2D tensor in a path that expected batched shape. The fork now normalizes intrinsics automatically, but if you pass `cam_ints` manually, keep each entry as either `(3, 3)` or `(1, 3, 3)`.

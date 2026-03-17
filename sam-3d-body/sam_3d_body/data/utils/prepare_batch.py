@@ -10,6 +10,30 @@ class NoCollate:
         self.data = data
 
 
+def _normalize_cam_int(cam_int, ref_tensor):
+    """Normalize camera intrinsics to shape ``[1, 3, 3]`` on ref dtype/device."""
+    if not torch.is_tensor(cam_int):
+        cam_int = torch.as_tensor(cam_int)
+
+    cam_int = cam_int.to(ref_tensor)
+
+    # Accept both (3, 3) and (1, 3, 3) inputs.
+    if cam_int.ndim == 2:
+        if tuple(cam_int.shape) != (3, 3):
+            raise ValueError(f"cam_int must be (3, 3) or (1, 3, 3), got {tuple(cam_int.shape)}")
+        cam_int = cam_int.unsqueeze(0)
+    elif cam_int.ndim == 3:
+        if tuple(cam_int.shape[1:]) != (3, 3):
+            raise ValueError(f"cam_int must be (3, 3) or (1, 3, 3), got {tuple(cam_int.shape)}")
+        if cam_int.shape[0] != 1:
+            # Per-image path only supports one intrinsics matrix.
+            cam_int = cam_int[:1]
+    else:
+        raise ValueError(f"cam_int must be (3, 3) or (1, 3, 3), got {tuple(cam_int.shape)}")
+
+    return cam_int
+
+
 def prepare_batch(
     img,
     transform,
@@ -61,7 +85,7 @@ def prepare_batch(
     batch["person_valid"] = torch.ones((1, max_num_person))
 
     if cam_int is not None:
-        batch["cam_int"] = cam_int.to(batch["img"])
+        batch["cam_int"] = _normalize_cam_int(cam_int, batch["img"])
     else:
         # Default camera intrinsics according image size
         batch["cam_int"] = torch.tensor(

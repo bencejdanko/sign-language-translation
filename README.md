@@ -1,10 +1,6 @@
 # Sign Language Translation
 
-![alt text](image.png)
-
-<video src="https://github.com/bencejdanko/sign-language-translation/raw/refs/heads/main/output_overlay.mp4" controls="controls" style="max-width: 100%;">
-  Your browser does not support the video tag.
-</video>
+https://github.com/bencejdanko/sign-language-translation/raw/refs/heads/main/output_overlay.mp4
 
 Video-to-sign language translation using [facebook/sam-3d-body](https://github.com/facebookresearch/sam-3d-body) and the [How2Sign](https://how2sign.github.io/) dataset.
 

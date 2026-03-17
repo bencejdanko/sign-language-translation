@@ -2027,7 +2027,7 @@ class SAM3DBody(BaseModel):
 
     def run_inference_batch(
         self,
-        img,
+        imgs_list,
         batch: Dict,
         inference_type: str = "full",
         transform_hand: Any = None,

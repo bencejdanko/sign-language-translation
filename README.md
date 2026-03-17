@@ -1,6 +1,6 @@
 # Sign Language Translation
 
-https://github.com/user-attachments/assets/1699948f-545c-4742-a342-3318e9e981ee
+![Overlay Example](https://raw.githubusercontent.com/bencejdanko/sign-language-translation/refs/heads/main/overlay.gif)
 
 Video-to-sign language translation using [facebook/sam-3d-body](https://github.com/facebookresearch/sam-3d-body) and the [How2Sign](https://how2sign.github.io/) dataset.
 

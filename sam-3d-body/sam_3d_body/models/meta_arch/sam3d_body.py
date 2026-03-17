@@ -1028,13 +1028,24 @@ class SAM3DBody(BaseModel):
         B, N, _, H, W = batch["img"].shape
         # Be permissive with custom batching paths that may pass unbatched transforms.
         affine_trans = batch["affine_trans"]
-        if affine_trans.dim() == 2:
+        if not torch.is_tensor(affine_trans):
+            affine_trans = torch.as_tensor(affine_trans, device=batch["img"].device)
+        if affine_trans.dim() == 2 and tuple(affine_trans.shape) == (2, 3):
             affine_trans = affine_trans.unsqueeze(0).unsqueeze(0)  # [1, 1, 2, 3]
         elif affine_trans.dim() == 3:
+            if tuple(affine_trans.shape[-2:]) != (2, 3):
+                raise ValueError(
+                    f"batch['affine_trans'] must end with (2, 3), got {tuple(affine_trans.shape)}"
+                )
             affine_trans = affine_trans.unsqueeze(1)  # [B, 1, 2, 3]
-        if affine_trans.dim() != 4:
+        elif affine_trans.dim() == 4:
+            if tuple(affine_trans.shape[-2:]) != (2, 3):
+                raise ValueError(
+                    f"batch['affine_trans'] must end with (2, 3), got {tuple(affine_trans.shape)}"
+                )
+        else:
             raise ValueError(
-                f"batch['affine_trans'] must be [B, N, 2, 3], got {tuple(affine_trans.shape)}"
+                f"batch['affine_trans'] must be [2,3], [B,2,3], or [B,N,2,3]; got {tuple(affine_trans.shape)}"
             )
         if affine_trans.shape[0] == 1 and B > 1:
             affine_trans = affine_trans.expand(B, -1, -1, -1)
@@ -1043,11 +1054,17 @@ class SAM3DBody(BaseModel):
 
         # Be permissive with camera-intrinsics shape for custom inference paths.
         cam_int = batch["cam_int"]
-        if cam_int.dim() == 2:
+        if not torch.is_tensor(cam_int):
+            cam_int = torch.as_tensor(cam_int, device=batch["img"].device)
+        if cam_int.dim() == 2 and tuple(cam_int.shape) == (3, 3):
             cam_int = cam_int.unsqueeze(0)  # [1, 3, 3]
-        if cam_int.dim() != 3:
+        elif cam_int.dim() == 4 and cam_int.shape[1] == 1 and tuple(cam_int.shape[-2:]) == (3, 3):
+            cam_int = cam_int[:, 0]  # [B, 3, 3]
+        elif cam_int.dim() == 3 and tuple(cam_int.shape[-2:]) == (3, 3):
+            pass
+        else:
             raise ValueError(
-                f"batch['cam_int'] must be [B, 3, 3], got {tuple(cam_int.shape)}"
+                f"batch['cam_int'] must be [3,3], [B,3,3], or [B,1,3,3]; got {tuple(cam_int.shape)}"
             )
         if cam_int.shape[0] == 1 and B > 1:
             cam_int = cam_int.expand(B, -1, -1)

@@ -1026,13 +1026,31 @@ class SAM3DBody(BaseModel):
 
     def get_ray_condition(self, batch):
         B, N, _, H, W = batch["img"].shape
-        # Be permissive with camera-intrinsics shape for custom inference paths.
-        if batch["cam_int"].dim() == 2:
-            batch["cam_int"] = batch["cam_int"].unsqueeze(0)
-        if batch["cam_int"].dim() != 3:
+        # Be permissive with custom batching paths that may pass unbatched transforms.
+        affine_trans = batch["affine_trans"]
+        if affine_trans.dim() == 2:
+            affine_trans = affine_trans.unsqueeze(0).unsqueeze(0)  # [1, 1, 2, 3]
+        elif affine_trans.dim() == 3:
+            affine_trans = affine_trans.unsqueeze(1)  # [B, 1, 2, 3]
+        if affine_trans.dim() != 4:
             raise ValueError(
-                f"batch['cam_int'] must be [B, 3, 3], got {tuple(batch['cam_int'].shape)}"
+                f"batch['affine_trans'] must be [B, N, 2, 3], got {tuple(affine_trans.shape)}"
             )
+        if affine_trans.shape[0] == 1 and B > 1:
+            affine_trans = affine_trans.expand(B, -1, -1, -1)
+        if affine_trans.shape[1] == 1 and N > 1:
+            affine_trans = affine_trans.expand(-1, N, -1, -1)
+
+        # Be permissive with camera-intrinsics shape for custom inference paths.
+        cam_int = batch["cam_int"]
+        if cam_int.dim() == 2:
+            cam_int = cam_int.unsqueeze(0)  # [1, 3, 3]
+        if cam_int.dim() != 3:
+            raise ValueError(
+                f"batch['cam_int'] must be [B, 3, 3], got {tuple(cam_int.shape)}"
+            )
+        if cam_int.shape[0] == 1 and B > 1:
+            cam_int = cam_int.expand(B, -1, -1)
         meshgrid_xy = (
             torch.stack(
                 torch.meshgrid(torch.arange(H), torch.arange(W), indexing="xy"), dim=2
@@ -1041,21 +1059,17 @@ class SAM3DBody(BaseModel):
             .cuda()
         )  # B x N x H x W x 2
         meshgrid_xy = (
-            meshgrid_xy / batch["affine_trans"][:, :, None, None, [0, 1], [0, 1]]
+            meshgrid_xy / affine_trans[:, :, None, None, [0, 1], [0, 1]]
         )
         meshgrid_xy = (
             meshgrid_xy
-            - batch["affine_trans"][:, :, None, None, [0, 1], [2, 2]]
-            / batch["affine_trans"][:, :, None, None, [0, 1], [0, 1]]
+            - affine_trans[:, :, None, None, [0, 1], [2, 2]]
+            / affine_trans[:, :, None, None, [0, 1], [0, 1]]
         )
 
         # Subtract out center & normalize to be rays
-        meshgrid_xy = (
-            meshgrid_xy - batch["cam_int"][:, None, None, None, [0, 1], [2, 2]]
-        )
-        meshgrid_xy = (
-            meshgrid_xy / batch["cam_int"][:, None, None, None, [0, 1], [0, 1]]
-        )
+        meshgrid_xy = meshgrid_xy - cam_int[:, None, None, None, [0, 1], [2, 2]]
+        meshgrid_xy = meshgrid_xy / cam_int[:, None, None, None, [0, 1], [0, 1]]
 
         return meshgrid_xy.permute(0, 1, 4, 2, 3).to(
             batch["img"].dtype

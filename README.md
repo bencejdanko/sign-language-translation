@@ -4,6 +4,8 @@
 
 Video-to-sign language translation using [facebook/sam-3d-body](https://github.com/facebookresearch/sam-3d-body) and the [How2Sign](https://how2sign.github.io/) dataset.
 
+<img width="639" height="353" alt="image" src="https://github.com/user-attachments/assets/97eb1d12-3ce8-4945-8f7d-538e68e13cc4" />
+
 ## Custom SAM-3D-Body Fork
 
 We've modified the core `sam-3d-body` library to natively support parallel bounding-box and keypoint inference across multiple video frames entirely on the GPU.

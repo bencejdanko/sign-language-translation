@@ -81,7 +81,8 @@ class PooledBackboneEmbeddingHook(contextlib.AbstractContextManager):
         if tensor is None:
             return
         pooled = _pool_embedding(tensor.detach())
-        self._batches.append(pooled.cpu())
+        # NumPy does not support bfloat16, so normalize to float32 at capture time.
+        self._batches.append(pooled.float().cpu())
 
     def pop_batch(self) -> Optional[torch.Tensor]:
         if not self._batches:
@@ -124,7 +125,7 @@ def _attach_embeddings_to_batch_results(
     n = min(n_frames, n_embed)
 
     for i in range(n):
-        emb_i = pooled_batch[i].numpy()
+        emb_i = pooled_batch[i].float().numpy()
         for person in batch_results[i]:
             person[key_name] = emb_i
         frame_embeddings.append(emb_i)
